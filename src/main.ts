@@ -179,7 +179,7 @@ root.innerHTML = `
           <p class="brand-footer-qr-caption">Scan to download all tracks</p>
         </div>
         <p class="brand-footer-text">
-          Want a page like this?
+          Want a page like this for your project?
           <a
             class="brand-footer-link"
             href="https://www.echosound.space"
