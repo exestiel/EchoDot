@@ -29,5 +29,6 @@ function albumManifestPlugin(): Plugin {
 }
 
 export default defineConfig({
+  base: '/EchoDot/',
   plugins: [albumManifestPlugin()],
 })
