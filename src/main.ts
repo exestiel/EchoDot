@@ -21,9 +21,34 @@ if (!root) {
 }
 
 const data = getAlbumManifest()
-const downloadAllHref = '/audio/Stockdale Christian School Band Compilation 1997-2011.zip'
+const baseUrl = import.meta.env.BASE_URL ?? '/'
 
-const tracksHtml = data.tracks
+function withBaseUrl(url: string): string {
+  if (/^(https?:)?\/\//i.test(url) || url.startsWith('data:') || url.startsWith('blob:')) {
+    return url
+  }
+  const base = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`
+  if (url.startsWith('/')) {
+    return `${base}${url.slice(1)}`
+  }
+  return `${base}${url.replace(/^\.\//, '')}`
+}
+
+const album = {
+  ...data.album,
+  heroImageUrl: withBaseUrl(data.album.heroImageUrl),
+}
+
+const tracks = data.tracks.map((t) => ({
+  ...t,
+  audioUrl: withBaseUrl(t.audioUrl),
+  coverUrl: t.coverUrl ? withBaseUrl(t.coverUrl) : undefined,
+  downloadUrl: t.downloadUrl ? withBaseUrl(t.downloadUrl) : undefined,
+}))
+
+const downloadAllHref = withBaseUrl('/audio/Stockdale Christian School Band Compilation 1997-2011.zip')
+
+const tracksHtml = tracks
   .map((t, index) => {
     const thumbBlock = t.coverUrl
       ? `<button
@@ -60,10 +85,10 @@ const tracksHtml = data.tracks
   })
   .join('')
 
-const heroSubtitle = data.album.subtitle
-  ? `<p class="hero-subtitle">${escapeHtml(data.album.subtitle)}</p>`
+const heroSubtitle = album.subtitle
+  ? `<p class="hero-subtitle">${escapeHtml(album.subtitle)}</p>`
   : ''
-const heroEra = data.album.era ? `<p class="hero-era">${escapeHtml(data.album.era)}</p>` : ''
+const heroEra = album.era ? `<p class="hero-era">${escapeHtml(album.era)}</p>` : ''
 
 root.innerHTML = `
   <div class="embed-shell">
@@ -71,8 +96,8 @@ root.innerHTML = `
       <div class="hero-visual">
         <img
           class="hero-img"
-          src="${escapeAttr(data.album.heroImageUrl)}"
-          alt="${escapeAttr(`${data.album.title} — cover artwork`)}"
+          src="${escapeAttr(album.heroImageUrl)}"
+          alt="${escapeAttr(`${album.title} — cover artwork`)}"
           width="1200"
           height="630"
           loading="eager"
@@ -80,7 +105,7 @@ root.innerHTML = `
         />
         <div class="hero-scrim" aria-hidden="true"></div>
         <div class="hero-content">
-          <h1 id="album-title" class="hero-title">${escapeHtml(data.album.title)}</h1>
+          <h1 id="album-title" class="hero-title">${escapeHtml(album.title)}</h1>
           ${heroSubtitle}
           ${heroEra}
         </div>
@@ -96,7 +121,7 @@ root.innerHTML = `
       ></div>
       <div id="now-playing-live" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
       <section class="album-story-section" aria-label="Album story">
-        <div class="album-story-body prose">${data.album.storyHtml}</div>
+        <div class="album-story-body prose">${album.storyHtml}</div>
       </section>
       <section class="tracks-section" aria-label="Tracks">
         ${tracksHtml}
@@ -387,7 +412,7 @@ function prefersReducedMotion(): boolean {
 }
 
 function scrollActiveTrackIntoView(index: number): void {
-  const slug = data.tracks[index]?.slug
+  const slug = tracks[index]?.slug
   if (!slug) return
   const el = document.getElementById(slug)
   if (!el) return
@@ -399,7 +424,7 @@ function scrollActiveTrackIntoView(index: number): void {
 
 function applyPlaybackUi(state: PlaybackState): void {
   const { phase, currentIndex, errorMessage: err } = state
-  const hasTracks = data.tracks.length > 0
+  const hasTracks = tracks.length > 0
 
   if (err) {
     errorBanner.hidden = false
@@ -414,7 +439,7 @@ function applyPlaybackUi(state: PlaybackState): void {
   })
 
   playButtons.forEach((btn, i) => {
-    const title = data.tracks[i]?.title ?? ''
+    const title = tracks[i]?.title ?? ''
     const isCurrent = i === currentIndex && currentIndex >= 0
     const label =
       isCurrent && phase === 'playing'
@@ -429,8 +454,8 @@ function applyPlaybackUi(state: PlaybackState): void {
     btn.setAttribute('aria-busy', isCurrent && phase === 'loading' ? 'true' : 'false')
   })
 
-  if (currentIndex >= 0 && data.tracks[currentIndex]) {
-    const t = data.tracks[currentIndex]
+  if (currentIndex >= 0 && tracks[currentIndex]) {
+    const t = tracks[currentIndex]
     playerNowPlaying.textContent = t.title
     const isPlaying = phase === 'playing'
     if (isPlaying) {
@@ -466,11 +491,11 @@ function applyPlaybackUi(state: PlaybackState): void {
   }
 
   playerPrev.disabled = !hasTracks || currentIndex <= 0
-  playerNext.disabled = !hasTracks || currentIndex < 0 || currentIndex >= data.tracks.length - 1
+  playerNext.disabled = !hasTracks || currentIndex < 0 || currentIndex >= tracks.length - 1
   playerDownloadAll.setAttribute('aria-disabled', hasTracks ? 'false' : 'true')
 }
 
-const controller = createPlaylistController(data.tracks, audioEl, {
+const controller = createPlaylistController(tracks, audioEl, {
   onStateChange: applyPlaybackUi,
   onActiveTrackChange(index, reason) {
     if (reason === 'auto') {
@@ -496,7 +521,7 @@ playerToggle.addEventListener('click', () => {
     controller.togglePlayForTrack(state.currentIndex)
     return
   }
-  if (data.tracks.length > 0) {
+  if (tracks.length > 0) {
     controller.selectTrackAndPlay(0)
   }
 })
@@ -512,9 +537,9 @@ playerPrev.addEventListener('click', () => {
 playerNext.addEventListener('click', () => {
   void resumeAudioContext()
   const { currentIndex } = controller.getState()
-  if (currentIndex >= 0 && currentIndex < data.tracks.length - 1) {
+  if (currentIndex >= 0 && currentIndex < tracks.length - 1) {
     controller.selectTrackAndPlay(currentIndex + 1)
-  } else if (currentIndex < 0 && data.tracks.length > 0) {
+  } else if (currentIndex < 0 && tracks.length > 0) {
     controller.selectTrackAndPlay(0)
   }
 })
