@@ -282,6 +282,7 @@ let audioCtx: AudioContext | null = null
 let analyser: AnalyserNode | null = null
 let analyserData: Uint8Array<ArrayBuffer> | null = null
 let rafId: number | null = null
+let wasMutedBeforeSeek: boolean | null = null
 const volumeStorageKey = 'echodot:playerVolume'
 const muteStorageKey = 'echodot:playerMuted'
 
@@ -635,6 +636,10 @@ audioEl.addEventListener('durationchange', syncPlayerFromAudio)
 
 playerSeek.addEventListener('pointerdown', (event) => {
   isSeeking = true
+  if (wasMutedBeforeSeek === null) {
+    wasMutedBeforeSeek = audioEl.muted
+  }
+  audioEl.muted = true
   if (event.pointerId !== undefined) {
     try {
       playerSeek.setPointerCapture(event.pointerId)
@@ -646,16 +651,28 @@ playerSeek.addEventListener('pointerdown', (event) => {
 
 playerSeek.addEventListener('pointerup', () => {
   isSeeking = false
+  if (wasMutedBeforeSeek !== null) {
+    audioEl.muted = wasMutedBeforeSeek
+    wasMutedBeforeSeek = null
+  }
   syncPlayerFromAudio()
 })
 
 playerSeek.addEventListener('pointercancel', () => {
   isSeeking = false
+  if (wasMutedBeforeSeek !== null) {
+    audioEl.muted = wasMutedBeforeSeek
+    wasMutedBeforeSeek = null
+  }
   syncPlayerFromAudio()
 })
 
 playerSeek.addEventListener('lostpointercapture', () => {
   isSeeking = false
+  if (wasMutedBeforeSeek !== null) {
+    audioEl.muted = wasMutedBeforeSeek
+    wasMutedBeforeSeek = null
+  }
   syncPlayerFromAudio()
 })
 
@@ -669,6 +686,10 @@ playerSeek.addEventListener('input', () => {
 
 playerSeek.addEventListener('change', () => {
   isSeeking = false
+  if (wasMutedBeforeSeek !== null) {
+    audioEl.muted = wasMutedBeforeSeek
+    wasMutedBeforeSeek = null
+  }
   syncPlayerFromAudio()
 })
 
