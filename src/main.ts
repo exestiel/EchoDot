@@ -282,6 +282,8 @@ let audioCtx: AudioContext | null = null
 let analyser: AnalyserNode | null = null
 let analyserData: Uint8Array<ArrayBuffer> | null = null
 let rafId: number | null = null
+const volumeStorageKey = 'echodot:playerVolume'
+const muteStorageKey = 'echodot:playerMuted'
 
 function calculateWaveBarCount(): number {
   const width = window.innerWidth
@@ -338,6 +340,15 @@ function stopWaveformLoop(): void {
   resetWaveBars()
 }
 
+function closeVolumePopover({ restoreFocus = false }: { restoreFocus?: boolean } = {}): void {
+  playerVolumePopover.hidden = true
+  playerVolumeToggle.setAttribute('aria-expanded', 'false')
+  playerVolumeToggle.setAttribute('aria-label', 'Show volume control')
+  if (restoreFocus) {
+    playerVolumeToggle.focus()
+  }
+}
+
 function ensureAudioAnalysis(): void {
   if (audioCtx || !('AudioContext' in window)) return
   try {
@@ -357,6 +368,10 @@ function ensureAudioAnalysis(): void {
 }
 
 function startWaveformLoop(): void {
+  if (prefersReducedMotion()) {
+    stopWaveformLoop()
+    return
+  }
   if (!analyser || !analyserData || rafId !== null) return
   const barOrder = getCenterOutBarOrder(playerWaveBars.length)
   const tick = () => {
@@ -386,6 +401,36 @@ async function resumeAudioContext(): Promise<void> {
   if (audioCtx.state === 'suspended') {
     await audioCtx.resume()
   }
+}
+
+function readStoredAudioPreference(): { volume: number; muted: boolean } {
+  try {
+    const rawVolume = window.localStorage.getItem(volumeStorageKey)
+    const rawMuted = window.localStorage.getItem(muteStorageKey)
+    const volumeParsed = rawVolume === null ? 1 : Number(rawVolume)
+    const mutedParsed = rawMuted === null ? false : rawMuted === 'true'
+    const volume = Number.isFinite(volumeParsed) ? Math.max(0, Math.min(1, volumeParsed)) : 1
+    return { volume, muted: mutedParsed }
+  } catch {
+    return { volume: 1, muted: false }
+  }
+}
+
+function writeStoredAudioPreference(volume: number, muted: boolean): void {
+  try {
+    window.localStorage.setItem(volumeStorageKey, String(volume))
+    window.localStorage.setItem(muteStorageKey, String(muted))
+  } catch {
+    // Ignore storage failures (private mode, blocked storage, etc.)
+  }
+}
+
+function setAudioVolumeState(nextVolume: number): void {
+  const volume = Number.isFinite(nextVolume) ? Math.max(0, Math.min(1, nextVolume)) : 1
+  audioEl.volume = volume
+  audioEl.muted = volume === 0
+  playerVolume.value = String(Math.round(volume * 100))
+  writeStoredAudioPreference(audioEl.volume, audioEl.muted)
 }
 
 function formatTime(seconds: number): string {
@@ -547,9 +592,7 @@ playerNext.addEventListener('click', () => {
 playerVolume.addEventListener('input', () => {
   const pct = Number(playerVolume.value)
   const clamped = Number.isFinite(pct) ? Math.max(0, Math.min(100, pct)) : 100
-  const volume = clamped / 100
-  audioEl.volume = volume
-  audioEl.muted = volume === 0
+  setAudioVolumeState(clamped / 100)
 })
 
 playerVolumeToggle.addEventListener('click', () => {
@@ -559,6 +602,8 @@ playerVolumeToggle.addEventListener('click', () => {
   playerVolumeToggle.setAttribute('aria-label', opening ? 'Hide volume control' : 'Show volume control')
   if (opening) {
     playerVolume.focus()
+  } else {
+    closeVolumePopover()
   }
 })
 
@@ -567,18 +612,20 @@ document.addEventListener('pointerdown', (event) => {
   const target = event.target
   if (!(target instanceof Node)) return
   if (playerVolumeWrap.contains(target)) return
-  playerVolumePopover.hidden = true
-  playerVolumeToggle.setAttribute('aria-expanded', 'false')
-  playerVolumeToggle.setAttribute('aria-label', 'Show volume control')
+  closeVolumePopover()
 })
 
 document.addEventListener('keydown', (event) => {
   if (event.key !== 'Escape') return
   if (playerVolumePopover.hidden) return
-  playerVolumePopover.hidden = true
-  playerVolumeToggle.setAttribute('aria-expanded', 'false')
-  playerVolumeToggle.setAttribute('aria-label', 'Show volume control')
-  playerVolumeToggle.focus()
+  closeVolumePopover({ restoreFocus: true })
+})
+
+playerVolumeWrap.addEventListener('focusout', (event) => {
+  if (playerVolumePopover.hidden) return
+  const next = event.relatedTarget
+  if (next instanceof Node && playerVolumeWrap.contains(next)) return
+  closeVolumePopover()
 })
 
 audioEl.addEventListener('loadedmetadata', syncPlayerFromAudio)
@@ -586,11 +633,28 @@ audioEl.addEventListener('timeupdate', syncPlayerFromAudio)
 audioEl.addEventListener('ended', syncPlayerFromAudio)
 audioEl.addEventListener('durationchange', syncPlayerFromAudio)
 
-playerSeek.addEventListener('pointerdown', () => {
+playerSeek.addEventListener('pointerdown', (event) => {
   isSeeking = true
+  if (event.pointerId !== undefined) {
+    try {
+      playerSeek.setPointerCapture(event.pointerId)
+    } catch {
+      // Some browsers may reject capture for range controls; ignore.
+    }
+  }
 })
 
 playerSeek.addEventListener('pointerup', () => {
+  isSeeking = false
+  syncPlayerFromAudio()
+})
+
+playerSeek.addEventListener('pointercancel', () => {
+  isSeeking = false
+  syncPlayerFromAudio()
+})
+
+playerSeek.addEventListener('lostpointercapture', () => {
   isSeeking = false
   syncPlayerFromAudio()
 })
@@ -603,17 +667,26 @@ playerSeek.addEventListener('input', () => {
   syncPlayerFromAudio()
 })
 
+playerSeek.addEventListener('change', () => {
+  isSeeking = false
+  syncPlayerFromAudio()
+})
+
 syncPlayerFromAudio()
 buildWaveBars()
 resetWaveBars()
-audioEl.volume = 1
-audioEl.muted = false
+const storedAudioPreference = readStoredAudioPreference()
+setAudioVolumeState(storedAudioPreference.volume)
+if (storedAudioPreference.muted) {
+  audioEl.muted = true
+  writeStoredAudioPreference(audioEl.volume, audioEl.muted)
+}
 
 window.addEventListener('resize', () => {
   const wasRunning = rafId !== null
   stopWaveformLoop()
   buildWaveBars()
-  if (wasRunning) {
+  if (wasRunning && !prefersReducedMotion()) {
     startWaveformLoop()
   }
 })

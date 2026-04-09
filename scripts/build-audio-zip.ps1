@@ -1,6 +1,7 @@
 param(
   [string]$AudioDir = "public/audio",
-  [string]$OutputZip = "public/audio/Stockdale Christian School Band Compilation 1997-2011.zip"
+  [string]$OutputZip = "public/audio/Stockdale Christian School Band Compilation 1997-2011.zip",
+  [int]$WarnIfZipExceedsMB = 95
 )
 
 $ErrorActionPreference = "Stop"
@@ -60,3 +61,8 @@ try {
 }
 
 Write-Host "Built audio zip: $OutputZip"
+
+$zipSizeMB = [math]::Round(((Get-Item -LiteralPath $OutputZip).Length / 1MB), 2)
+if ($zipSizeMB -gt $WarnIfZipExceedsMB) {
+  Write-Warning "Audio zip is ${zipSizeMB} MB (threshold: ${WarnIfZipExceedsMB} MB). Consider external hosting/CDN if this keeps growing."
+}

@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "powershell -ExecutionPolicy Bypass -File ./scripts/build-audio-zip.ps1 && tsc && vite build",
-    "preview": "vite preview"
+    "build": "powershell -ExecutionPolicy Bypass -File ./scripts/build-audio-zip.ps1 && node ./scripts/verify-media-paths.mjs && tsc && vite build",
+    "preview": "vite preview",
+    "check:pages-media": "node ./scripts/check-pages-media.mjs"
   },
   "devDependencies": {
     "@types/dompurify": "^3.0.5",
