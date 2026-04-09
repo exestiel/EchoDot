@@ -95,7 +95,7 @@ body {
   right: 0;
   z-index: 10;
   isolation: isolate;
-  overflow: hidden;
+  overflow: visible;
   display: grid;
   gap: 0.55rem;
   width: 100%;
@@ -187,6 +187,7 @@ body {
   position: absolute;
   right: 0;
   bottom: calc(100% + 0.35rem);
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -285,12 +286,36 @@ body {
   text-decoration: none;
 }
 
+.player-jump-current {
+  grid-column: 1;
+  justify-self: start;
+  min-height: 30px;
+  padding: 0.2rem 0.55rem;
+  border-radius: 8px;
+  border: 1px solid rgba(107, 90, 62, 0.35);
+  background: rgba(243, 237, 226, 0.78);
+  color: #4a3f2e;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .player-download-all:hover {
   background: rgba(196, 181, 154, 0.34);
   color: #1a1510;
 }
 
 .player-download-all:focus-visible {
+  outline: 2px solid #6b5a3e;
+  outline-offset: 2px;
+}
+
+.player-jump-current:hover {
+  background: rgba(196, 181, 154, 0.34);
+  color: #1a1510;
+}
+
+.player-jump-current:focus-visible {
   outline: 2px solid #6b5a3e;
   outline-offset: 2px;
 }
@@ -441,6 +466,7 @@ body {
 }
 
 .player-seek-wrap {
+  --seek-progress: 0;
   position: relative;
   height: 1.25rem;
   display: flex;
@@ -479,7 +505,13 @@ body {
 .player-seek::-webkit-slider-runnable-track {
   height: 0.26rem;
   border-radius: 999px;
-  background: rgba(107, 90, 62, 0.5);
+  background: linear-gradient(
+    90deg,
+    rgba(107, 90, 62, 0.82) 0%,
+    rgba(107, 90, 62, 0.82) calc(var(--seek-progress) * 100%),
+    rgba(107, 90, 62, 0.28) calc(var(--seek-progress) * 100%),
+    rgba(107, 90, 62, 0.28) 100%
+  );
 }
 
 .player-seek::-webkit-slider-thumb {
@@ -498,7 +530,7 @@ body {
   height: 0.26rem;
   border: 0;
   border-radius: 999px;
-  background: rgba(107, 90, 62, 0.5);
+  background: rgba(107, 90, 62, 0.28);
 }
 
 .player-seek::-moz-range-thumb {
@@ -509,6 +541,32 @@ body {
   background: #faf8f4;
   box-shadow: 0 1px 2px rgba(26, 21, 16, 0.2);
   cursor: pointer;
+}
+
+.player-seek-tooltip {
+  --seek-tooltip-progress: 0;
+  position: absolute;
+  left: calc(var(--seek-tooltip-progress) * 100%);
+  top: -1.35rem;
+  transform: translateX(-50%);
+  padding: 0.12rem 0.4rem;
+  border-radius: 6px;
+  background: rgba(26, 21, 16, 0.88);
+  color: #faf8f4;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.player-seek-tooltip[hidden] {
+  display: none;
+}
+
+.player-shortcuts-hint {
+  margin: 0;
+  text-align: center;
+  font-size: 0.72rem;
+  color: rgba(26, 21, 16, 0.62);
 }
 
 @media (min-width: 40rem) {
@@ -644,6 +702,61 @@ body {
   margin: 0;
 }
 
+.track-index {
+  position: sticky;
+  top: 3.8rem;
+  z-index: 4;
+  margin: 0.4rem 0 1.1rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid rgba(26, 21, 16, 0.12);
+  border-radius: 10px;
+  background: rgba(250, 248, 244, 0.92);
+  backdrop-filter: blur(6px);
+}
+
+.track-index-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: rgba(26, 21, 16, 0.68);
+}
+
+.track-index-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.38rem 0.45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.track-index-link {
+  min-height: 34px;
+  max-width: 100%;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid rgba(107, 90, 62, 0.22);
+  border-radius: 999px;
+  background: rgba(243, 237, 226, 0.72);
+  color: #3c3327;
+  font-size: 0.8rem;
+  line-height: 1.15;
+  text-align: left;
+  cursor: pointer;
+}
+
+.track-index-link--active {
+  border-color: rgba(107, 90, 62, 0.7);
+  background: rgba(196, 181, 154, 0.35);
+  color: #1a1510;
+}
+
+.track-index-link:focus-visible {
+  outline: 2px solid #6b5a3e;
+  outline-offset: 2px;
+}
+
 /* Phase 4: track memory capsules — header row, optional art, play/download (≥44px), inline story */
 .track-capsule {
   margin-top: 2rem;
@@ -652,6 +765,11 @@ body {
   border-top: 1px solid rgba(26, 21, 16, 0.12);
   border-radius: clamp(6px, 1.2vw, 12px);
   transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.track-anchor {
+  display: block;
+  scroll-margin-top: 0.75rem;
 }
 
 .track-capsule--active {
@@ -935,6 +1053,13 @@ body {
   margin: 0;
 }
 
+.track-status {
+  min-height: 1.25rem;
+  margin: 0 0 0.35rem;
+  font-size: 0.82rem;
+  color: #5f4f38;
+}
+
 .brand-footer {
   margin-top: 2.25rem;
   padding-top: 1rem;
@@ -971,7 +1096,7 @@ body {
 .brand-footer-qr-caption {
   margin: 0;
   font-size: 0.8rem;
-  color: rgba(26, 21, 16, 0.74);
+  color: rgba(26, 21, 16, 0.66);
 }
 
 .brand-footer-text {
@@ -1006,6 +1131,16 @@ body {
 
   .track-title {
     margin-bottom: 0.65rem;
+  }
+
+  .track-index {
+    top: 4.2rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .player-scrubber-wave-bar {
+    transition: none;
   }
 }
 

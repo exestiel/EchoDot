@@ -49,6 +49,27 @@ const tracks = data.tracks.map((t) => ({
 const downloadAllHref = withBaseUrl('/audio/Stockdale Christian School Band Compilation 1997-2011.zip')
 const downloadAllAbsoluteUrl = new URL(downloadAllHref, window.location.href).href
 const downloadQrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=192x192&margin=8&data=${encodeURIComponent(downloadAllAbsoluteUrl)}`
+const fallbackAlbumStoryHtml =
+  '<p>This compilation preserves performances from the Stockdale Christian School Band era.</p>'
+const fallbackTrackStoryHtml = '<p>Tap play to listen to this track.</p>'
+const trackStoryHtml = tracks.map((t) => {
+  const normalized = t.storyHtml.trim()
+  return normalized.length > 0 ? normalized : fallbackTrackStoryHtml
+})
+const trackIndexHtml = tracks
+  .map(
+    (t, index) => `<li>
+      <button
+        type="button"
+        class="track-index-link"
+        data-jump-index="${index}"
+        aria-label="Jump to ${escapeAttr(t.title)}"
+      >
+        ${escapeHtml(t.title)}
+      </button>
+    </li>`,
+  )
+  .join('')
 
 const tracksHtml = tracks
   .map((t, index) => {
@@ -74,6 +95,7 @@ const tracksHtml = tracks
       : ''
     return `
     <article class="track-capsule" id="${escapeAttr(t.slug)}">
+      <span class="track-anchor" id="${escapeAttr(`${t.slug}-anchor`)}" aria-hidden="true"></span>
       <header class="track-header">
         <div class="track-header-row">
           ${thumbBlock}
@@ -82,7 +104,8 @@ const tracksHtml = tracks
           </div>
         </div>
       </header>
-      <div class="track-story prose">${t.storyHtml}</div>
+      <p class="track-status" id="track-status-${index}" aria-live="polite"></p>
+      <div class="track-story prose" data-story-index="${index}">${trackStoryHtml[index]}</div>
     </article>`
   })
   .join('')
@@ -123,8 +146,14 @@ root.innerHTML = `
       ></div>
       <div id="now-playing-live" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
       <section class="album-story-section" aria-label="Album story">
-        <div class="album-story-body prose">${album.storyHtml}</div>
+        <div class="album-story-body prose">${album.storyHtml.trim().length > 0 ? album.storyHtml : fallbackAlbumStoryHtml}</div>
       </section>
+      <nav class="track-index" aria-label="Track index">
+        <p class="track-index-title">Tracks</p>
+        <ol class="track-index-list">
+          ${trackIndexHtml}
+        </ol>
+      </nav>
       <section class="tracks-section" aria-label="Tracks">
         ${tracksHtml}
       </section>
@@ -138,7 +167,8 @@ root.innerHTML = `
           >
             <img
               class="brand-footer-qr-image"
-              src="${escapeAttr(downloadQrSrc)}"
+              src=""
+              data-qr-src="${escapeAttr(downloadQrSrc)}"
               alt="QR code to download all tracks"
               width="144"
               height="144"
@@ -227,6 +257,9 @@ root.innerHTML = `
         </div>
       </div>
       <div class="player-meta-row">
+        <button type="button" class="player-jump-current" id="player-jump-current">
+          Jump to current track
+        </button>
         <p class="player-now-playing" id="player-now-playing">Not playing</p>
         <a
           class="player-download-all"
@@ -268,9 +301,11 @@ root.innerHTML = `
             step="1"
             aria-label="Seek playback"
           />
+          <span class="player-seek-tooltip" id="player-seek-tooltip" hidden>0:00</span>
         </div>
         <span class="player-time" id="player-duration" aria-hidden="true">0:00</span>
       </div>
+      <p class="player-shortcuts-hint">Shortcuts: Space play/pause, J previous, K next, M mute, arrows seek</p>
     </section>
     <audio
       id="album-audio"
@@ -306,8 +341,14 @@ const playerVolume = requiredEl<'input'>('#player-volume')
 const playerNowPlaying = requiredEl<'p'>('#player-now-playing')
 const playerScrubberWave = requiredEl<'div'>('.player-scrubber-wave')
 const playerSeek = requiredEl<'input'>('#player-seek')
+const playerSeekWrap = requiredEl<'div'>('.player-seek-wrap')
+const playerSeekTooltip = requiredEl<'span'>('#player-seek-tooltip')
 const playerCurrentTime = requiredEl<'span'>('#player-current-time')
 const playerDuration = requiredEl<'span'>('#player-duration')
+const playerJumpCurrent = requiredEl<'button'>('#player-jump-current')
+const trackIndexLinks = root.querySelectorAll<HTMLButtonElement>('.track-index-link')
+const trackStatuses = root.querySelectorAll<HTMLParagraphElement>('.track-status')
+const qrImage = root.querySelector<HTMLImageElement>('.brand-footer-qr-image')
 let playerWaveBars: HTMLElement[] = []
 const playButtons = root.querySelectorAll<HTMLButtonElement>('.track-cover-play-btn')
 const trackCapsules = root.querySelectorAll<HTMLElement>('.track-capsule')
@@ -317,8 +358,20 @@ let analyser: AnalyserNode | null = null
 let analyserData: Uint8Array<ArrayBuffer> | null = null
 let rafId: number | null = null
 let wasMutedBeforeSeek: boolean | null = null
+let lastKnownUnmutedVolume = 1
 const volumeStorageKey = 'echodot:playerVolume'
 const muteStorageKey = 'echodot:playerMuted'
+const longStoryIndexes = trackStoryHtml
+  .map((html, index) => ({ html, index }))
+  .filter((entry) => entry.html.length > 320)
+  .map((entry) => entry.index)
+
+function logUxEvent(name: string, detail: Record<string, unknown> = {}): void {
+  window.dispatchEvent(new CustomEvent('echodot:ux', { detail: { name, ...detail } }))
+  if (import.meta.env.DEV) {
+    console.debug('[ux]', name, detail)
+  }
+}
 
 function calculateWaveBarCount(): number {
   const width = window.innerWidth
@@ -382,6 +435,24 @@ function closeVolumePopover({ restoreFocus = false }: { restoreFocus?: boolean }
   if (restoreFocus) {
     playerVolumeToggle.focus()
   }
+}
+
+function updateSeekUi(progress: number): void {
+  const clamped = Number.isFinite(progress) ? Math.max(0, Math.min(1, progress)) : 0
+  playerSeekWrap.style.setProperty('--seek-progress', clamped.toFixed(4))
+}
+
+function updateWaveBarsFromProgress(progress: number): void {
+  const clamped = Number.isFinite(progress) ? Math.max(0, Math.min(1, progress)) : 0
+  const count = playerWaveBars.length
+  playerWaveBars.forEach((bar, index) => {
+    if (count <= 1) {
+      bar.style.setProperty('--wave-scale', '0.9')
+      return
+    }
+    const ratio = index / (count - 1)
+    bar.style.setProperty('--wave-scale', ratio <= clamped ? '1.15' : '0.65')
+  })
 }
 
 function ensureAudioAnalysis(): void {
@@ -462,6 +533,9 @@ function writeStoredAudioPreference(volume: number, muted: boolean): void {
 
 function setAudioVolumeState(nextVolume: number): void {
   const volume = Number.isFinite(nextVolume) ? Math.max(0, Math.min(1, nextVolume)) : 1
+  if (volume > 0) {
+    lastKnownUnmutedVolume = volume
+  }
   audioEl.volume = volume
   audioEl.muted = volume === 0
   playerVolume.value = String(Math.round(volume * 100))
@@ -479,9 +553,14 @@ function formatTime(seconds: number): string {
 function syncPlayerFromAudio(): void {
   const duration = Number.isFinite(audioEl.duration) ? audioEl.duration : 0
   const current = Number.isFinite(audioEl.currentTime) ? audioEl.currentTime : 0
+  const progress = duration > 0 ? current / duration : 0
   if (!isSeeking) {
     const nextValue = duration > 0 ? Math.round((current / duration) * 1000) : 0
     playerSeek.value = String(nextValue)
+  }
+  updateSeekUi(progress)
+  if (prefersReducedMotion()) {
+    updateWaveBarsFromProgress(progress)
   }
   playerCurrentTime.textContent = formatTime(current)
   playerDuration.textContent = formatTime(duration)
@@ -494,11 +573,42 @@ function prefersReducedMotion(): boolean {
 function scrollActiveTrackIntoView(index: number): void {
   const slug = tracks[index]?.slug
   if (!slug) return
-  const el = document.getElementById(slug)
+  const el = document.getElementById(`${slug}-anchor`) ?? document.getElementById(slug)
   if (!el) return
   el.scrollIntoView({
     behavior: prefersReducedMotion() ? 'auto' : 'smooth',
     block: 'nearest',
+  })
+}
+
+function jumpTrackIntoView(index: number): void {
+  const slug = tracks[index]?.slug
+  if (!slug) return
+  const el = document.getElementById(`${slug}-anchor`) ?? document.getElementById(slug)
+  if (!el) return
+
+  const playerBar = document.querySelector<HTMLElement>('.player-bar')
+  const playerHeight = playerBar ? playerBar.getBoundingClientRect().height : 0
+  const topMargin = 12
+  const bottomMargin = Math.max(12, Math.ceil(playerHeight) + 8)
+  const rect = el.getBoundingClientRect()
+  const viewportHeight = window.innerHeight
+  const availableHeight = Math.max(80, viewportHeight - topMargin - bottomMargin)
+  const isFullyVisible = rect.top >= topMargin && rect.bottom <= viewportHeight - bottomMargin
+
+  if (isFullyVisible) return
+
+  let targetTop = window.scrollY + rect.top - topMargin
+  if (rect.height <= availableHeight) {
+    const overflowBelow = rect.bottom - (viewportHeight - bottomMargin)
+    if (overflowBelow > 0) {
+      targetTop += overflowBelow
+    }
+  }
+
+  window.scrollTo({
+    top: Math.max(0, targetTop),
+    behavior: prefersReducedMotion() ? 'auto' : 'smooth',
   })
 }
 
@@ -516,6 +626,21 @@ function applyPlaybackUi(state: PlaybackState): void {
 
   trackCapsules.forEach((capsule, i) => {
     capsule.classList.toggle('track-capsule--active', i === currentIndex && currentIndex >= 0)
+  })
+  trackIndexLinks.forEach((link, i) => {
+    const isCurrent = i === currentIndex && currentIndex >= 0
+    link.classList.toggle('track-index-link--active', isCurrent)
+    link.setAttribute('aria-current', isCurrent ? 'true' : 'false')
+  })
+  trackStatuses.forEach((node, i) => {
+    const isCurrent = i === currentIndex && currentIndex >= 0
+    if (!isCurrent) {
+      node.textContent = ''
+      return
+    }
+    if (phase === 'loading') node.textContent = 'Loading audio...'
+    else if (phase === 'error' && err) node.textContent = err
+    else node.textContent = ''
   })
 
   playButtons.forEach((btn, i) => {
@@ -590,6 +715,7 @@ playButtons.forEach((btn) => {
     const raw = btn.dataset.trackIndex
     const index = raw === undefined ? NaN : Number.parseInt(raw, 10)
     if (Number.isNaN(index)) return
+    logUxEvent('track_toggle_click', { index, title: tracks[index]?.title ?? '' })
     controller.togglePlayForTrack(index)
   })
 })
@@ -610,6 +736,7 @@ playerPrev.addEventListener('click', () => {
   void resumeAudioContext()
   const { currentIndex } = controller.getState()
   if (currentIndex > 0) {
+    logUxEvent('player_prev_click', { fromIndex: currentIndex })
     controller.selectTrackAndPlay(currentIndex - 1)
   }
 })
@@ -618,8 +745,10 @@ playerNext.addEventListener('click', () => {
   void resumeAudioContext()
   const { currentIndex } = controller.getState()
   if (currentIndex >= 0 && currentIndex < tracks.length - 1) {
+    logUxEvent('player_next_click', { fromIndex: currentIndex })
     controller.selectTrackAndPlay(currentIndex + 1)
   } else if (currentIndex < 0 && tracks.length > 0) {
+    logUxEvent('player_next_click', { fromIndex: currentIndex })
     controller.selectTrackAndPlay(0)
   }
 })
@@ -642,6 +771,27 @@ playerVolumeToggle.addEventListener('click', () => {
   }
 })
 
+trackIndexLinks.forEach((link) => {
+  link.addEventListener('click', () => {
+    const raw = link.dataset.jumpIndex
+    const index = raw === undefined ? NaN : Number.parseInt(raw, 10)
+    if (Number.isNaN(index)) return
+    const slug = tracks[index]?.slug
+    if (!slug) return
+    const capsule = document.getElementById(`${slug}-anchor`) ?? document.getElementById(slug)
+    if (!capsule) return
+    logUxEvent('track_jump_click', { index, title: tracks[index]?.title ?? '' })
+    capsule.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' })
+  })
+})
+
+playerJumpCurrent.addEventListener('click', () => {
+  const { currentIndex } = controller.getState()
+  if (currentIndex < 0) return
+  jumpTrackIntoView(currentIndex)
+  logUxEvent('player_jump_current', { index: currentIndex })
+})
+
 document.addEventListener('pointerdown', (event) => {
   if (playerVolumePopover.hidden) return
   const target = event.target
@@ -651,9 +801,56 @@ document.addEventListener('pointerdown', (event) => {
 })
 
 document.addEventListener('keydown', (event) => {
-  if (event.key !== 'Escape') return
-  if (playerVolumePopover.hidden) return
-  closeVolumePopover({ restoreFocus: true })
+  if (event.key === 'Escape' && !playerVolumePopover.hidden) {
+    closeVolumePopover({ restoreFocus: true })
+    return
+  }
+  if (!playerVolumePopover.hidden && event.key === 'Tab') {
+    const first = playerVolume
+    const last = playerVolumeToggle
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault()
+      last.focus()
+      return
+    }
+    if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault()
+      first.focus()
+    }
+    return
+  }
+  const target = event.target
+  const isTextInput =
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    (target instanceof HTMLElement && target.isContentEditable)
+  if (isTextInput) return
+  if (event.key === ' ' || event.key === 'Spacebar') {
+    event.preventDefault()
+    playerToggle.click()
+  } else if (event.key.toLowerCase() === 'j') {
+    event.preventDefault()
+    playerPrev.click()
+  } else if (event.key.toLowerCase() === 'k') {
+    event.preventDefault()
+    playerNext.click()
+  } else if (event.key.toLowerCase() === 'm') {
+    event.preventDefault()
+    if (audioEl.muted || audioEl.volume === 0) {
+      setAudioVolumeState(lastKnownUnmutedVolume)
+    } else {
+      setAudioVolumeState(0)
+    }
+  } else if (event.key === 'ArrowLeft') {
+    event.preventDefault()
+    audioEl.currentTime = Math.max(0, audioEl.currentTime - 5)
+    syncPlayerFromAudio()
+  } else if (event.key === 'ArrowRight') {
+    event.preventDefault()
+    const duration = Number.isFinite(audioEl.duration) ? audioEl.duration : 0
+    audioEl.currentTime = Math.min(duration, audioEl.currentTime + 5)
+    syncPlayerFromAudio()
+  }
 })
 
 playerVolumeWrap.addEventListener('focusout', (event) => {
@@ -674,6 +871,7 @@ playerSeek.addEventListener('pointerdown', (event) => {
     wasMutedBeforeSeek = audioEl.muted
   }
   audioEl.muted = true
+  playerSeekTooltip.hidden = false
   if (event.pointerId !== undefined) {
     try {
       playerSeek.setPointerCapture(event.pointerId)
@@ -689,6 +887,7 @@ playerSeek.addEventListener('pointerup', () => {
     audioEl.muted = wasMutedBeforeSeek
     wasMutedBeforeSeek = null
   }
+  playerSeekTooltip.hidden = true
   syncPlayerFromAudio()
 })
 
@@ -698,6 +897,7 @@ playerSeek.addEventListener('pointercancel', () => {
     audioEl.muted = wasMutedBeforeSeek
     wasMutedBeforeSeek = null
   }
+  playerSeekTooltip.hidden = true
   syncPlayerFromAudio()
 })
 
@@ -707,6 +907,7 @@ playerSeek.addEventListener('lostpointercapture', () => {
     audioEl.muted = wasMutedBeforeSeek
     wasMutedBeforeSeek = null
   }
+  playerSeekTooltip.hidden = true
   syncPlayerFromAudio()
 })
 
@@ -715,6 +916,9 @@ playerSeek.addEventListener('input', () => {
   const ratio = Number(playerSeek.value) / 1000
   const nextTime = Math.max(0, Math.min(audioEl.duration, ratio * audioEl.duration))
   audioEl.currentTime = nextTime
+  playerSeekTooltip.textContent = formatTime(nextTime)
+  playerSeekTooltip.style.setProperty('--seek-tooltip-progress', String(ratio))
+  logUxEvent('seek_input', { ratio })
   syncPlayerFromAudio()
 })
 
@@ -724,12 +928,78 @@ playerSeek.addEventListener('change', () => {
     audioEl.muted = wasMutedBeforeSeek
     wasMutedBeforeSeek = null
   }
+  playerSeekTooltip.hidden = true
   syncPlayerFromAudio()
 })
+
+playerDownloadAll.addEventListener('click', () => {
+  logUxEvent('download_all_click', { source: 'player_bar' })
+})
+
+function setupLazyTrackStories(): void {
+  if (longStoryIndexes.length === 0) return
+  const storyNodes = document.querySelectorAll<HTMLElement>('.track-story[data-story-index]')
+  const byIndex = new Map<number, HTMLElement>()
+  storyNodes.forEach((node) => {
+    const raw = node.dataset.storyIndex
+    const index = raw === undefined ? NaN : Number.parseInt(raw, 10)
+    if (!Number.isNaN(index)) {
+      byIndex.set(index, node)
+    }
+  })
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return
+        const node = entry.target
+        if (!(node instanceof HTMLElement)) return
+        const raw = node.dataset.storyIndex
+        const index = raw === undefined ? NaN : Number.parseInt(raw, 10)
+        if (Number.isNaN(index)) return
+        if (!longStoryIndexes.includes(index)) {
+          observer.unobserve(node)
+          return
+        }
+        node.innerHTML = trackStoryHtml[index]
+        observer.unobserve(node)
+      })
+    },
+    { rootMargin: '300px 0px' },
+  )
+  longStoryIndexes.forEach((index) => {
+    const node = byIndex.get(index)
+    if (!node) return
+    node.innerHTML = fallbackTrackStoryHtml
+    observer.observe(node)
+  })
+}
+
+function deferQrImageLoad(): void {
+  if (!qrImage) return
+  const source = qrImage.dataset.qrSrc
+  if (!source) return
+  const footer = document.querySelector<HTMLElement>('.brand-footer')
+  if (!footer) {
+    qrImage.src = source
+    return
+  }
+  const observer = new IntersectionObserver(
+    (entries) => {
+      const isVisible = entries.some((entry) => entry.isIntersecting)
+      if (!isVisible) return
+      qrImage.src = source
+      observer.disconnect()
+    },
+    { rootMargin: '200px 0px' },
+  )
+  observer.observe(footer)
+}
 
 syncPlayerFromAudio()
 buildWaveBars()
 resetWaveBars()
+setupLazyTrackStories()
+deferQrImageLoad()
 const storedAudioPreference = readStoredAudioPreference()
 setAudioVolumeState(storedAudioPreference.volume)
 if (storedAudioPreference.muted) {
