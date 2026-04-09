@@ -4,11 +4,11 @@
     "subtitle": "Under the direction of Gary Scudder",
     "era": "1997 - 2011",
     "heroImageUrl": "/images/hero-placeholder.svg",
-    "story": "## Why this album\n\nWe lost touch for years — then one group chat turned into **this**: a set of recordings from alumni who never stopped hearing the downbeat.\n\n- A thank-you to directors who believed in late rehearsals\n- A nod to friends in the back row\n\n> “Same stands. Different hairlines.” — *section leader, woodwinds*\n\n[Placeholder link](https://example.com) for your band or program site."
+    "story": ""
   },
   "tracks": [
     {
-      "title": "2003 - 2004 Dance I",
+      "title": "Dance I",
       "slug": "2003-2004-dance-i",
       "audioUrl": "/audio/01 - 2003 - 2004 Stockdale Christian School - Dance I.mp3",
       "downloadUrl": "/audio/01 - 2003 - 2004 Stockdale Christian School - Dance I.mp3",
@@ -16,7 +16,7 @@
       "story": "Archival performance by the Stockdale Christian School Band under Gary Scudder."
     },
     {
-      "title": "1999 - 2000 River of Life",
+      "title": "River of Life",
       "slug": "1999-2000-river-of-life",
       "audioUrl": "/audio/02 - 1999-2000 Stockdale Christian School - River of Life.mp3",
       "downloadUrl": "/audio/02 - 1999-2000 Stockdale Christian School - River of Life.mp3",
@@ -24,7 +24,7 @@
       "story": "From the 1999 - 2000 season collection at Stockdale Christian School."
     },
     {
-      "title": "1999 - 2000 Schottische",
+      "title": "Schottische",
       "slug": "1999-2000-schottische",
       "audioUrl": "/audio/03 - 1999-2000 Stockdale Christian School - Schottische.mp3",
       "downloadUrl": "/audio/03 - 1999-2000 Stockdale Christian School - Schottische.mp3",
@@ -32,7 +32,7 @@
       "story": "A preserved performance from the school band archives."
     },
     {
-      "title": "1999 - 2000 On A Hymnsong of Philip Bliss",
+      "title": "On A Hymnsong of Philip Bliss",
       "slug": "1999-2000-on-a-hymnsong-of-philip-bliss",
       "audioUrl": "/audio/04 - 1999-2000 Stockdale Christian School - On A Hymsong of Philip Bliss.mp3",
       "downloadUrl": "/audio/04 - 1999-2000 Stockdale Christian School - On A Hymsong of Philip Bliss.mp3",
@@ -40,7 +40,7 @@
       "story": "Concert band recording from the Stockdale Christian School compilation years."
     },
     {
-      "title": "1999 - 2000 Clarinetics",
+      "title": "Clarinetics",
       "slug": "1999-2000-clarinetics",
       "audioUrl": "/audio/05 - 1999-2000 Stockdale Christian School - Clarinetics.mp3",
       "downloadUrl": "/audio/05 - 1999-2000 Stockdale Christian School - Clarinetics.mp3",
@@ -96,7 +96,7 @@
       "story": "Historic performance included in the Stockdale Christian School anthology."
     },
     {
-      "title": "1997 - 1998 Valdres",
+      "title": "Valdres",
       "slug": "1997-1998-valdres",
       "audioUrl": "/audio/12 - 1997-1998 Stockdale Christian School - Valdres.mp3",
       "downloadUrl": "/audio/12 - 1997-1998 Stockdale Christian School - Valdres.mp3",
