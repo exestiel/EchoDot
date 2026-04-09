@@ -47,6 +47,8 @@ const tracks = data.tracks.map((t) => ({
 }))
 
 const downloadAllHref = withBaseUrl('/audio/Stockdale Christian School Band Compilation 1997-2011.zip')
+const downloadAllAbsoluteUrl = new URL(downloadAllHref, window.location.href).href
+const downloadQrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=192x192&margin=8&data=${encodeURIComponent(downloadAllAbsoluteUrl)}`
 
 const tracksHtml = tracks
   .map((t, index) => {
@@ -126,6 +128,38 @@ root.innerHTML = `
       <section class="tracks-section" aria-label="Tracks">
         ${tracksHtml}
       </section>
+      <footer class="brand-footer" aria-label="Echo Sound Space">
+        <div class="brand-footer-qr">
+          <a
+            class="brand-footer-qr-link"
+            href="${escapeAttr(downloadAllHref)}"
+            download
+            aria-label="Download all tracks"
+          >
+            <img
+              class="brand-footer-qr-image"
+              src="${escapeAttr(downloadQrSrc)}"
+              alt="QR code to download all tracks"
+              width="144"
+              height="144"
+              loading="lazy"
+              decoding="async"
+            />
+          </a>
+          <p class="brand-footer-qr-caption">Scan to download all tracks</p>
+        </div>
+        <p class="brand-footer-text">
+          Want a page like this?
+          <a
+            class="brand-footer-link"
+            href="https://www.echosound.space"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Visit our website
+          </a>
+        </p>
+      </footer>
     </main>
     <section class="player-bar" aria-label="Player controls">
       <div class="player-main-row">
