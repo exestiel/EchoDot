@@ -176,13 +176,35 @@ body {
 }
 
 .player-volume-slider {
-  -webkit-appearance: slider-vertical;
-  appearance: slider-vertical;
-  writing-mode: bt-lr;
-  width: 1rem;
-  height: 5.8rem;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 5.8rem;
+  height: 1rem;
   margin: 0;
+  transform: rotate(-90deg);
+  transform-origin: center;
   accent-color: #6b5a3e;
+  background: transparent;
+}
+
+.player-volume-slider::-webkit-slider-runnable-track {
+  height: 0.3rem;
+}
+
+.player-volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 0.9rem;
+  height: 0.9rem;
+  margin-top: -0.3rem;
+}
+
+.player-volume-slider::-moz-range-track {
+  height: 0.3rem;
+}
+
+.player-volume-slider::-moz-range-thumb {
+  width: 0.9rem;
+  height: 0.9rem;
 }
 
 .player-meta-row {
