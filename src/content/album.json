@@ -1,0 +1,107 @@
+{
+  "album": {
+    "title": "Stockdale Christian School Band Compilation",
+    "subtitle": "Under the direction of Gary Scudder",
+    "era": "Class of 1997–2011",
+    "heroImageUrl": "/images/hero-placeholder.svg",
+    "story": "## Why this album\n\nWe lost touch for years — then one group chat turned into **this**: a set of recordings from alumni who never stopped hearing the downbeat.\n\n- A thank-you to directors who believed in late rehearsals\n- A nod to friends in the back row\n\n> “Same stands. Different hairlines.” — *section leader, woodwinds*\n\n[Placeholder link](https://example.com) for your band or program site."
+  },
+  "tracks": [
+    {
+      "title": "2003 - 2004 Dance I",
+      "slug": "2003-2004-dance-i",
+      "audioUrl": "/audio/01 - 2003 - 2004 Stockdale Christian School - Dance I.mp3",
+      "downloadUrl": "/audio/01 - 2003 - 2004 Stockdale Christian School - Dance I.mp3",
+      "coverUrl": "/images/track-placeholder.svg",
+      "story": "Archival performance by the Stockdale Christian School Band under Gary Scudder."
+    },
+    {
+      "title": "1999 - 2000 River of Life",
+      "slug": "1999-2000-river-of-life",
+      "audioUrl": "/audio/02 - 1999-2000 Stockdale Christian School - River of Life.mp3",
+      "downloadUrl": "/audio/02 - 1999-2000 Stockdale Christian School - River of Life.mp3",
+      "coverUrl": "/images/track-placeholder.svg",
+      "story": "From the 1999 - 2000 season collection at Stockdale Christian School."
+    },
+    {
+      "title": "1999 - 2000 Schottische",
+      "slug": "1999-2000-schottische",
+      "audioUrl": "/audio/03 - 1999-2000 Stockdale Christian School - Schottische.mp3",
+      "downloadUrl": "/audio/03 - 1999-2000 Stockdale Christian School - Schottische.mp3",
+      "coverUrl": "/images/track-placeholder.svg",
+      "story": "A preserved performance from the school band archives."
+    },
+    {
+      "title": "1999 - 2000 On A Hymnsong of Philip Bliss",
+      "slug": "1999-2000-on-a-hymnsong-of-philip-bliss",
+      "audioUrl": "/audio/04 - 1999-2000 Stockdale Christian School - On A Hymsong of Philip Bliss.mp3",
+      "downloadUrl": "/audio/04 - 1999-2000 Stockdale Christian School - On A Hymsong of Philip Bliss.mp3",
+      "coverUrl": "/images/track-placeholder.svg",
+      "story": "Concert band recording from the Stockdale Christian School compilation years."
+    },
+    {
+      "title": "1999 - 2000 Clarinetics",
+      "slug": "1999-2000-clarinetics",
+      "audioUrl": "/audio/05 - 1999-2000 Stockdale Christian School - Clarinetics.mp3",
+      "downloadUrl": "/audio/05 - 1999-2000 Stockdale Christian School - Clarinetics.mp3",
+      "coverUrl": "/images/track-placeholder.svg",
+      "story": "Archival woodwind feature from the band program led by Gary Scudder."
+    },
+    {
+      "title": "Country Dance",
+      "slug": "country-dance",
+      "audioUrl": "/audio/06 - Stockdale Christian School - Country Dance.mp3",
+      "downloadUrl": "/audio/06 - Stockdale Christian School - Country Dance.mp3",
+      "coverUrl": "/images/track-placeholder.svg",
+      "story": "Stockdale Christian School Band performance from the compilation catalog."
+    },
+    {
+      "title": "Modoree",
+      "slug": "modoree",
+      "audioUrl": "/audio/07 - Stockdale Christian School - Modoree.mp3",
+      "downloadUrl": "/audio/07 - Stockdale Christian School - Modoree.mp3",
+      "coverUrl": "/images/track-placeholder.svg",
+      "story": "A legacy recording included in the 1997 - 2011 compilation."
+    },
+    {
+      "title": "Partita",
+      "slug": "partita",
+      "audioUrl": "/audio/08 - Stockdale Christian School - Partita.mp3",
+      "downloadUrl": "/audio/08 - Stockdale Christian School - Partita.mp3",
+      "coverUrl": "/images/track-placeholder.svg",
+      "story": "Concert performance from the Stockdale Christian School band archives."
+    },
+    {
+      "title": "Concert Etude",
+      "slug": "concert-etude",
+      "audioUrl": "/audio/09 - Stockdale Christian School - Concert Etude.mp3",
+      "downloadUrl": "/audio/09 - Stockdale Christian School - Concert Etude.mp3",
+      "coverUrl": "/images/track-placeholder.svg",
+      "story": "A featured work from the Gary Scudder era recordings."
+    },
+    {
+      "title": "Toccatarantella",
+      "slug": "toccatarantella",
+      "audioUrl": "/audio/10 - Stockdale Christian School - Toccatarantella.mp3",
+      "downloadUrl": "/audio/10 - Stockdale Christian School - Toccatarantella.mp3",
+      "coverUrl": "/images/track-placeholder.svg",
+      "story": "Preserved school band recording from the compilation set."
+    },
+    {
+      "title": "On The Overland Stage to El Paso",
+      "slug": "on-the-overland-stage-to-el-paso",
+      "audioUrl": "/audio/11 - Stockdale Christian School - On The Overland Stage to El Paso.mp3",
+      "downloadUrl": "/audio/11 - Stockdale Christian School - On The Overland Stage to El Paso.mp3",
+      "coverUrl": "/images/track-placeholder.svg",
+      "story": "Historic performance included in the Stockdale Christian School anthology."
+    },
+    {
+      "title": "1997 - 1998 Valdres",
+      "slug": "1997-1998-valdres",
+      "audioUrl": "/audio/12 - 1997-1998 Stockdale Christian School - Valdres.mp3",
+      "downloadUrl": "/audio/12 - 1997-1998 Stockdale Christian School - Valdres.mp3",
+      "coverUrl": "/images/track-placeholder.svg",
+      "story": "One of the earliest recordings represented in this compilation timeline."
+    }
+  ]
+}
